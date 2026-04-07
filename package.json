@@ -1,0 +1,63 @@
+{
+    "name": "tripack",
+    "version": "0.1.0",
+    "description": "A minimal JavaScript bundler built from scratch — AST parsing, dependency graph, tree-shaking",
+    "main": "dist/bundler.js",
+    "bin": {
+        "tripack": "./dist/cli.js"
+    },
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch",
+        "bundle:simple": "node dist/cli.js --entry examples/simple/index.js --out examples/simple/dist/bundle.js --verbose",
+        "bundle:complex": "node dist/cli.js --entry examples/complex/index.js --out examples/complex/dist/bundle.js --verbose",
+        "bundle:treeshake": "node dist/cli.js --entry examples/tree-shaking/index.js --out examples/tree-shaking/dist/bundle.js --tree-shake --verbose",
+        "test": "npm run build && node --test",
+        "prepack": "npm run build",
+        "prepublishOnly": "npm test"
+    },
+    "files": [
+        "dist",
+        "README.md",
+        "LICENSE"
+    ],
+    "types": "dist/bundler.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/bundler.d.ts",
+            "import": "./dist/bundler.js"
+        }
+    },
+    "engines": {
+        "node": ">=20"
+    },
+    "keywords": [
+        "bundler",
+        "ast",
+        "module",
+        "tree-shaking",
+        "webpack"
+    ],
+    "homepage": "https://github.com/otabekoff/tripack#readme",
+    "bugs": {
+        "url": "https://github.com/otabekoff/tripack/issues"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/otabekoff/tripack.git"
+    },
+    "license": "MIT",
+    "author": "Otabek Sadiridinov <sadiridinovotabek@gmail.com>",
+    "type": "module",
+    "dependencies": {
+        "acorn": "^8.16.0",
+        "acorn-walk": "^8.3.5",
+        "chalk": "^5.6.2",
+        "commander": "^14.0.3",
+        "magic-string": "^0.30.21"
+    },
+    "devDependencies": {
+        "@types/node": "^25.5.2",
+        "typescript": "^6.0.2"
+    }
+}
