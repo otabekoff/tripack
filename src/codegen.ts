@@ -45,16 +45,18 @@ const BANNER = `\
  * @param entry     The entry module
  */
 export function generateBundle(modules: Module[], entry: Module): string {
+  const runtimeIdMap = createRuntimeIdMap(modules);
+
     const date = new Date().toISOString();
     const banner = BANNER
         .replace('{MODULE_COUNT}', String(modules.length))
         .replace('{DATE}', date);
 
     const moduleDefinitions = modules
-        .map(mod => formatModuleDefinition(mod))
+    .map(mod => formatModuleDefinition(mod, runtimeIdMap))
         .join(',\n\n');
 
-    const runtime = buildRuntime(entry.id);
+  const runtime = buildRuntime(runtimeIdMap.get(entry.id) ?? entry.id);
 
     return [
         banner,
@@ -83,8 +85,16 @@ function buildRuntime(entryId: string): string {
 /** Installed (cached) modules */
 var __module_cache__ = {};
 
+/** Native require fallback for Node.js builtins/external modules */
+var __native_require__ =
+  typeof require === 'function'
+    ? require
+    : (typeof module !== 'undefined' && module && typeof module.require === 'function'
+        ? module.require.bind(module)
+        : null);
+
 /**
- * Require a module by its id (resolved file path).
+ * Require a module by its internal runtime id.
  * Implements the CommonJS module wrapper pattern.
  */
 function __require(moduleId) {
@@ -92,6 +102,14 @@ function __require(moduleId) {
   var cachedModule = __module_cache__[moduleId];
   if (cachedModule !== undefined) {
     return cachedModule.exports;
+  }
+
+  // Delegate unknown ids to the host runtime (e.g. node:path)
+  if (!Object.prototype.hasOwnProperty.call(modules, moduleId)) {
+    if (__native_require__) {
+      return __native_require__(moduleId);
+    }
+    throw new Error('Cannot resolve external module: ' + moduleId);
   }
 
   // Create a new module object and store it in the cache BEFORE execution.
@@ -125,12 +143,43 @@ return __require(${JSON.stringify(entryId)});`;
 // Module definition formatter
 // ─────────────────────────────────────────────────────────────────────────────
 
-function formatModuleDefinition(mod: Module): string {
-    const header = `  ${JSON.stringify(mod.id)}: function(module, exports, __require) {`;
-    const body = indent(mod.transformed.trim(), 4);
+function formatModuleDefinition(mod: Module, runtimeIdMap: Map<string, string>): string {
+  const runtimeId = runtimeIdMap.get(mod.id) ?? mod.id;
+  const transformed = remapDependencyIds(mod.transformed, mod.dependencyMap, runtimeIdMap);
+
+  const header = `  ${JSON.stringify(runtimeId)}: function(module, exports, __require) {`;
+  const body = indent(transformed.trim(), 4);
     const footer = `  }`;
 
     return [header, body, footer].join('\n');
+}
+
+function createRuntimeIdMap(modules: Module[]): Map<string, string> {
+  const map = new Map<string, string>();
+  modules.forEach((mod, index) => {
+    map.set(mod.id, `m${index}`);
+  });
+  return map;
+}
+
+function remapDependencyIds(
+  transformedCode: string,
+  dependencyMap: Record<string, string>,
+  runtimeIdMap: Map<string, string>,
+): string {
+  let code = transformedCode;
+  const dependencyIds = new Set(Object.values(dependencyMap));
+
+  for (const depId of dependencyIds) {
+    const runtimeDepId = runtimeIdMap.get(depId);
+    if (!runtimeDepId) continue;
+
+    const from = `__require(${JSON.stringify(depId)})`;
+    const to = `__require(${JSON.stringify(runtimeDepId)})`;
+    code = code.split(from).join(to);
+  }
+
+  return code;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

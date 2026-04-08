@@ -4,5 +4,5 @@
 export { factorial, fibonacci } from "./math.js";
 export { capitalize, slugify } from "./string.js";
 
-export const VERSION = "0.1.0";
+export const VERSION = "0.1.1";
 export const APP_NAME = "tripack-demo";

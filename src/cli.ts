@@ -10,7 +10,7 @@ import { bundle } from './bundler.js';
 
 const pkg = {
     name: 'tripack',
-    version: '0.1.0',
+    version: '0.1.1',
     description: 'A minimal JavaScript bundler built from scratch',
 };
 

@@ -39,21 +39,23 @@ export function buildGraph(entryPath: string, verbose = false): GraphResult {
     const cycles: string[][] = [];
 
     function visit(filePath: string): Module {
-        // ── already processed ──────────────────────────────────────────────────
-        if (moduleMap.has(filePath)) return moduleMap.get(filePath)!;
-
         // ── cycle detection ────────────────────────────────────────────────────
         if (visiting.has(filePath)) {
             const cycleStart = visitStack.indexOf(filePath);
-            const cycle = [...visitStack.slice(cycleStart), filePath];
+            const cycle = cycleStart >= 0
+                ? [...visitStack.slice(cycleStart), filePath]
+                : [filePath, filePath];
             cycles.push(cycle);
             if (verbose) {
                 console.warn(`⚠  Circular dependency detected:\n   ${cycle.join(' → ')}`);
             }
-            // Return a placeholder to break the cycle; it will be filled on the
-            // way back up the recursion.
-            return createPlaceholder(filePath);
+            // Return the existing module stub to break recursion while preserving
+            // already-known metadata for the cycle participant.
+            return moduleMap.get(filePath) ?? createPlaceholder(filePath);
         }
+
+        // ── already processed ──────────────────────────────────────────────────
+        if (moduleMap.has(filePath)) return moduleMap.get(filePath)!;
 
         // ── read & parse source ────────────────────────────────────────────────
         let code: string;
